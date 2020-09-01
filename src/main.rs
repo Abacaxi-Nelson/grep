@@ -1,32 +1,41 @@
 use std::env;
 use std::fs;
+use std::error::Error;
+use std::process;
 
 fn main() {
-    let arguments: Vec<String> = env::args().collect();
-    println!("Exe: {}", arguments.first().unwrap());
-    println!("Arguments: {:?}", arguments.split_first().unwrap().1);
+    let args: Vec<String> = env::args().collect();
 
-    // dumb rule, when we deal with object, we only store reference.alloc
-    // thus, we dont copy arguments, we still point to the original argument
-    let query = &arguments[1];
-    let filename = &arguments[2];
-    println!("Search: {}", query);
-    println!("File: {}", filename);
+    let config = Config::new(&args).unwrap();
 
-    // read file passed in args
-    let contents = fs::read_to_string(filename)
-        // says if ok -> return content to 'contents' var
-        // or panic with this error message
-        .expect(&format!("Hum, i cannot read this file: {}", filename));
-
-    println!("Text content:\n{}", contents);
-
-    // search feature
-    let mut lines_results = Vec::new();
-    for line in contents.lines() {
-        if line.contains(query) {
-            lines_results.push(line);
-        }
+    if let Err(e) = run(config) {
+        println!("Application error: {}", e);
+        process::exit(1);
     }
-    println!("lines_results: {:?}", lines_results);
+}
+
+struct Config {
+    query: String,
+    filename: String,
+}
+
+impl Config {
+    fn new(args: &[String]) -> Result<Config, &'static str> {
+        if args.len() < 3 {
+            return Err("not enough arguments");
+        }
+
+        let query = args[1].clone();
+        let filename = args[2].clone();
+
+        Ok(Config { query, filename })
+    }
+} 
+
+fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.filename)?;
+
+    println!("With text:\n{}", contents);
+
+    Ok(())
 }
